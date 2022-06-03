@@ -30,12 +30,42 @@ template <auto A, auto B> constexpr auto compare(const char(&a)[A], const char(&
 
 
 template <auto A, auto B> constexpr auto concatenate(const char(&a)[A], const char(&b)[B]) {
-    std::array<char, A+ B-1> data;
+    std::array<char, A + B - 1> data;
     const auto valid = A - 1;
     for (auto i = 0u; i < valid; ++i)
         data[i] = a[i];
     for (auto i = 0u; i < B; ++i)
-        data[i+ valid] = b[i];
+        data[i + valid] = b[i];
+    return data;
+}
+
+
+template <auto W, auto N> constexpr auto center(const char(&a)[N], char fill) {
+
+    const auto w_total = W + 1;
+
+    static_assert(w_total >= N);
+
+    std::array<char, w_total> data;
+
+    if constexpr (w_total == N) {
+        for (auto i = 0u; i < N; ++i)
+            data[i] = a[i];
+    }
+    else {
+        const auto diff = W - N;
+        const auto start = static_cast<unsigned int>(diff * .5);
+        const auto end = start + N;
+
+        for (auto i = 0u; i < W; ++i) {
+            if (i > start && i < end)
+                data[i] = a[i - start - 1];
+            else
+                data[i] = fill;
+        }
+        data[W] = 0;
+    }
+
     return data;
 }
 
@@ -59,11 +89,11 @@ template <typename ... ARGS> constexpr auto all_greater_zero(ARGS ... args) {
 }
 
 
-struct elements
+template <auto SIZE = 64> struct elements
 {
     struct element
     {
-        unsigned int key = 0;
+        unsigned int key = 0u;
         int value = 0;
     };
 
@@ -79,11 +109,10 @@ struct elements
                 return e.value;
 
         return 0;
-
     }
 
     int _offset = 0;
-    std::array<element, 64> _data;
+    std::array<element, SIZE> _data;
 
 private:
     template <auto N> constexpr auto hash(const char(&a)[N]) const {
@@ -95,16 +124,30 @@ private:
     }
 };
 
+template <auto N>
+struct key
+{
+    const char value[N];
+};
+
+constexpr static key key_1 = { "first" };
+constexpr static key key_2 = { "second" };
+constexpr static key key_3 = { "third" };
+
+constexpr static auto stored_elements = []() {
+
+    elements<3> e{};
+    e.add_element(key_1.value, 100);
+    e.add_element(key_2.value, 200);
+    e.add_element(key_3.value, 300);
+
+    return e;
+
+}();
 
 template <auto N> constexpr auto get_value(const char(&key)[N])
 {
-    elements e{};
-
-    e.add_element("first", 100);
-    e.add_element("second", 200);
-    e.add_element("third", 300);
-
-    return e.get(key);
+    return stored_elements.get(key);
 }
 
 enum class MOVE
@@ -140,10 +183,10 @@ template <typename ... ARGS> constexpr auto move_turtle(ARGS ... args) {
     for (const auto& direction : std::initializer_list<MOVE>{ args... }) {
         switch (direction)
         {
-            case(MOVE::LEFT): x -= 1; break;
-            case(MOVE::RIGHT): x += 1; break;
-            case(MOVE::DOWN): y += 1; break;
-            case(MOVE::UP): y -= 1; break;
+        case(MOVE::LEFT): x -= 1; break;
+        case(MOVE::RIGHT): x += 1; break;
+        case(MOVE::DOWN): y += 1; break;
+        case(MOVE::UP): y -= 1; break;
         }
 
         map.set(x, y, '#');
@@ -166,6 +209,13 @@ int main()
     constexpr static auto res_string = concatenate("Hello ", "World!");
     puts(res_string.data());
 
+    constexpr static auto first_line = center<60>(" Hello World! ", '#');
+    puts(first_line.data());
+
+    constexpr static auto second_line = center<60>(" this is a test ", '#');
+    puts(second_line.data());
+
+
     static_assert(is_even(1) == false);
     static_assert(is_even(2));
 
@@ -180,10 +230,12 @@ int main()
     constexpr static auto check_false = all_greater_zero(-5, 2, 3, 4);
     static_assert(check_false == false);
 
-    constexpr static auto value = get_value("third");
+ 
+    constexpr static auto value = get_value(key_3.value);
     static_assert(value == 300);
 
-    constexpr static auto nothing = get_value("nothing");
+    constexpr static auto key_nothing = key{ "nothing" };
+    constexpr static auto nothing = get_value(key_nothing.value);
     static_assert(nothing == 0);
 
     constexpr static auto check_res = all_greater_zero(get_value("first"));
